@@ -6,14 +6,14 @@ import { nextCookies } from "better-auth/next-js";
 
 import { initAuth } from "@acme/auth";
 
+import { resolveBaseUrl } from "./base-url";
 import { env } from "~/env";
 
-const baseUrl =
-  env.VERCEL_ENV === "production"
-    ? `https://${env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : env.VERCEL_ENV === "preview"
-      ? `https://${env.VERCEL_URL}`
-      : "http://localhost:3000";
+const baseUrl = resolveBaseUrl({
+  VERCEL_ENV: env.VERCEL_ENV,
+  VERCEL_PROJECT_PRODUCTION_URL: env.VERCEL_PROJECT_PRODUCTION_URL,
+  VERCEL_URL: env.VERCEL_URL,
+});
 
 export const auth = initAuth({
   baseUrl,
