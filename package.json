@@ -30,6 +30,7 @@
     "@acme/prettier-config": "workspace:*",
     "@turbo/gen": "^2.5.8",
     "dotenv-cli": "^10.0.0",
+    "istanbul-lib-coverage": "^3.2.1",
     "prettier": "catalog:",
     "turbo": "^2.5.8",
     "typescript": "catalog:"

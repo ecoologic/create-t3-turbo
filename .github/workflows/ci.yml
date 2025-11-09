@@ -73,30 +73,30 @@ jobs:
       - name: Test
         run: pnpm -F @acme/nextjs spec -- --run --coverage
 
-      - name: Ensure coverage report exists
-        run: |
-          set -euo pipefail
-          if [ ! -f apps/nextjs/coverage/coverage-final.json ]; then
-            echo "coverage-final.json missing; writing 0% placeholder."
-            mkdir -p apps/nextjs/coverage
-            cat <<'JSON' > apps/nextjs/coverage/coverage-final.json
-          {
-            "__placeholder__": {
-              "lines": { "covered": 0, "total": 1 },
-              "branches": { "covered": 0, "total": 1 },
-              "functions": { "covered": 0, "total": 1 },
-              "statements": { "covered": 0, "total": 1 }
-            }
-          }
-          JSON
-          fi
-
       - name: Summarize coverage
         id: summarize_coverage
         run: |
           set -euo pipefail
           mkdir -p tmp
-          node scripts/coverage-summary.mjs apps/nextjs/coverage/coverage-final.json tmp/nextjs-coverage-summary.json | tee tmp/nextjs-coverage-summary.txt
+          INPUT_PATH=""
+          if [ -f apps/nextjs/coverage/coverage-summary.json ]; then
+            INPUT_PATH="apps/nextjs/coverage/coverage-summary.json"
+          elif [ -f apps/nextjs/coverage/coverage-final.json ]; then
+            INPUT_PATH="apps/nextjs/coverage/coverage-final.json"
+          else
+            INPUT_PATH="tmp/coverage-placeholder.json"
+            cat <<'JSON' > "$INPUT_PATH"
+            {
+              "total": {
+                "lines": { "covered": 0, "total": 1 },
+                "branches": { "covered": 0, "total": 1 },
+                "functions": { "covered": 0, "total": 1 },
+                "statements": { "covered": 0, "total": 1 }
+              }
+            }
+          JSON
+          fi
+          node scripts/coverage-summary.mjs "$INPUT_PATH" tmp/nextjs-coverage-summary.json | tee tmp/nextjs-coverage-summary.txt
 
       - name: Capture coverage metrics
         id: coverage_metrics
@@ -112,6 +112,25 @@ jobs:
           append("branches_pct", summary.totals.branches.pct);
           append("functions_pct", summary.totals.functions.pct);
           append("statements_pct", summary.totals.statements.pct);
+          NODE
+
+      - name: Enforce minimum coverage
+        env:
+          MIN_LINES_COVERAGE: "10"
+          LINES_PCT: ${{ steps.coverage_metrics.outputs.lines_pct }}
+        run: |
+          node - <<'NODE'
+          const min = Number(process.env.MIN_LINES_COVERAGE);
+          const lines = Number(process.env.LINES_PCT ?? 0);
+          if (Number.isNaN(lines)) {
+            console.error("Unable to parse lines coverage percentage.");
+            process.exit(1);
+          }
+          if (lines < min) {
+            console.error(`Coverage check failed: lines ${lines}% < minimum ${min}%.`);
+            process.exit(1);
+          }
+          console.log(`Coverage check passed: lines ${lines}% >= minimum ${min}%.`);
           NODE
 
       - name: Publish coverage summary

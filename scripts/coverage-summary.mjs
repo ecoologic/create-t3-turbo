@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 /**
- * Aggregates Vitest/C8 coverage output into a compact summary file.
+ * Aggregates Vitest/C8 coverage output (either coverage-final.json or
+ * coverage-summary.json) into a compact summary file.
  *
  * Usage:
  *   node scripts/coverage-summary.mjs <input-json> <output-json>
  */
 import { readFileSync, writeFileSync } from "node:fs";
+import { createCoverageMap } from "istanbul-lib-coverage";
 
 const [inputPath, outputPath] = process.argv.slice(2);
 
@@ -15,22 +17,28 @@ if (!inputPath || !outputPath) {
 }
 
 const coverage = JSON.parse(readFileSync(inputPath, "utf8"));
+const metrics = ["lines", "branches", "functions", "statements"];
 
-const totals = {
-  lines: { covered: 0, total: 0 },
-  branches: { covered: 0, total: 0 },
-  functions: { covered: 0, total: 0 },
-  statements: { covered: 0, total: 0 },
-};
+const buildTotalsFromSummary = (summary) =>
+  Object.fromEntries(
+    metrics.map((metric) => {
+      const payload = summary?.[metric] ?? {};
+      const covered = Number(payload.covered ?? 0);
+      const total = Number(payload.total ?? 0);
+      return [
+        metric,
+        {
+          covered,
+          total,
+        },
+      ];
+    }),
+  );
 
-for (const file of Object.values(coverage)) {
-  for (const key of Object.keys(totals)) {
-    if (file[key]) {
-      totals[key].covered += file[key].covered ?? 0;
-      totals[key].total += file[key].total ?? 0;
-    }
-  }
-}
+const totals =
+  coverage && typeof coverage === "object" && "total" in coverage
+    ? buildTotalsFromSummary(coverage.total)
+    : buildTotalsFromSummary(createCoverageMap(coverage ?? {}).getCoverageSummary().toJSON());
 
 const toPct = (covered, total) =>
   total === 0 ? 100 : Math.round((covered / total) * 10000) / 100;
