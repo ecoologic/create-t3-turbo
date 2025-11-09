@@ -184,7 +184,9 @@ jobs:
               (candidate) => candidate.name === "nextjs-coverage-summary",
             );
             if (!artifact) {
-              core.warning(`No nextjs-coverage-summary artifact found on run ${run.id}.`);
+              core.warning(
+                `No nextjs-coverage-summary artifact found on run id ${run.id} (${run.html_url}).`,
+              );
               core.setOutput("found", "false");
               return;
             }
