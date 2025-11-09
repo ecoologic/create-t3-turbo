@@ -7,7 +7,8 @@
  *   node scripts/coverage-summary.mjs <input-json> <output-json>
  */
 import { readFileSync, writeFileSync } from "node:fs";
-import { createCoverageMap } from "istanbul-lib-coverage";
+import coverageLib from "istanbul-lib-coverage";
+const { createCoverageMap } = coverageLib;
 
 const [inputPath, outputPath] = process.argv.slice(2);
 

@@ -11,7 +11,7 @@
     "start": "pnpm with-env next start",
     "typecheck": "tsc --noEmit",
     "with-env": "dotenv -e ../../.env --",
-    "spec": "vitest run"
+    "specs": "vitest run"
   },
   "dependencies": {
     "@acme/api": "workspace:*",

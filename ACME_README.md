@@ -30,10 +30,11 @@ pnpm lint:fix
 
 ### Coverage reporting
 
-- CI now runs `pnpm -F @acme/nextjs spec -- --run --coverage` on every push/PR and pipes the Vitest V8 output through `scripts/coverage-summary.mjs` to generate a single `nextjs-coverage-summary.json`.
+- Configure min test percentage in apps/nextjs/vitest.config.ts and ci.yml
+- CI now runs `pnpm -F @acme/nextjs specs --coverage` on every push/PR and pipes the Vitest V8 output through `scripts/coverage-summary.mjs` to generate a single `nextjs-coverage-summary.json`.
 - Each run uploads an artifact named `nextjs-coverage-$SHA` that contains the raw Vitest reports plus the summary text file so you can download historical coverage per commit directly from the Actions UI.
 - Successful main runs also upload a lightweight `nextjs-coverage-summary` artifact; pull requests automatically fetch the most recent one from `main`, compare the line/branch/function/statement percentages, and display the delta in the job summary.
-- The summary step prefers Vitest's `coverage-summary.json`, but if that file isn't available it consumes `coverage-final.json`; only when both are missing does it fall back to the 0% placeholder (typically when the suite fails before writing coverage).
+- The summary step prefers Vitest's `coverage-summary.json`, but if that file isn't available it consumes `coverage-final.json`; if neither exists the workflow fails so missing coverage can't slip through unnoticed.
 - The pipeline fails if line coverage dips below 10%, so keep at least one real test in place before opening a PR.
 - If no successful `main` run exists yet the compare step is skipped, but artifacts are still created so the next run has a baseline.
 - You can inspect the coverage totals/deltas inside the `CI / test` job summary and, if needed, download the summary artifact to feed into other tooling.

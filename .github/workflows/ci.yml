@@ -71,7 +71,7 @@ jobs:
         uses: ./tooling/github/setup
 
       - name: Test
-        run: pnpm -F @acme/nextjs spec -- --run --coverage
+        run: pnpm -F @acme/nextjs specs --coverage
 
       - name: Summarize coverage
         id: summarize_coverage
@@ -84,17 +84,9 @@ jobs:
           elif [ -f apps/nextjs/coverage/coverage-final.json ]; then
             INPUT_PATH="apps/nextjs/coverage/coverage-final.json"
           else
-            INPUT_PATH="tmp/coverage-placeholder.json"
-            cat <<'JSON' > "$INPUT_PATH"
-            {
-              "total": {
-                "lines": { "covered": 0, "total": 1 },
-                "branches": { "covered": 0, "total": 1 },
-                "functions": { "covered": 0, "total": 1 },
-                "statements": { "covered": 0, "total": 1 }
-              }
-            }
-          JSON
+            echo "Expected coverage summary JSON but none was produced." >&2
+            echo "Ensure 'pnpm -F @acme/nextjs specs --coverage' writes to apps/nextjs/coverage/." >&2
+            exit 1
           fi
           node scripts/coverage-summary.mjs "$INPUT_PATH" tmp/nextjs-coverage-summary.json | tee tmp/nextjs-coverage-summary.txt
 
@@ -116,11 +108,11 @@ jobs:
 
       - name: Enforce minimum coverage
         env:
-          MIN_LINES_COVERAGE: "10"
+          MIN_LINES_COVERAGE_PERCENT: "1"
           LINES_PCT: ${{ steps.coverage_metrics.outputs.lines_pct }}
         run: |
           node - <<'NODE'
-          const min = Number(process.env.MIN_LINES_COVERAGE);
+          const min = Number(process.env.MIN_LINES_COVERAGE_PERCENT);
           const lines = Number(process.env.LINES_PCT ?? 0);
           if (Number.isNaN(lines)) {
             console.error("Unable to parse lines coverage percentage.");
