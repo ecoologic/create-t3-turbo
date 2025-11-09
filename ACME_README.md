@@ -35,7 +35,6 @@ pnpm lint:fix
 - Successful main runs also upload a lightweight `nextjs-coverage-summary` artifact; pull requests automatically fetch the most recent one from `main`, compare the line/branch/function/statement percentages, and display the delta in the job summary.
 - If no successful `main` run exists yet the compare step is skipped, but artifacts are still created so the next run has a baseline.
 - You can inspect the coverage totals/deltas inside the `CI / test` job summary and, if needed, download the summary artifact to feed into other tooling.
-
 OK: pg broken
 TODO: GHA
 TODO: enforce specs with eslint
