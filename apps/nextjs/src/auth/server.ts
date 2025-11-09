@@ -6,8 +6,8 @@ import { nextCookies } from "better-auth/next-js";
 
 import { initAuth } from "@acme/auth";
 
-import { resolveBaseUrl } from "./base-url";
 import { env } from "~/env";
+import { resolveBaseUrl } from "./base-url";
 
 const baseUrl = resolveBaseUrl({
   VERCEL_ENV: env.VERCEL_ENV,

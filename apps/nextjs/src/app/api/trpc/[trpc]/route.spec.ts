@@ -1,14 +1,14 @@
 import type { NextRequest } from "next/server";
-import { describe, expect, it, beforeEach, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => {
-  return {
-    fetchRequestHandler: vi.fn(async () => new Response("ok", { status: 200 })),
-    createTRPCContext: vi.fn(async () => ({ session: null })),
-    auth: { mocked: true },
-    appRouter: { _def: {} },
-  };
-});
+import { GET, OPTIONS } from "./route";
+
+const mocks = vi.hoisted(() => ({
+  fetchRequestHandler: vi.fn().mockResolvedValue(new Response("ok")),
+  createTRPCContext: vi.fn().mockResolvedValue({ session: null }),
+  auth: { mocked: true },
+  appRouter: { _def: {} },
+}));
 
 vi.mock("@trpc/server/adapters/fetch", () => ({
   fetchRequestHandler: mocks.fetchRequestHandler,
@@ -22,8 +22,6 @@ vi.mock("@acme/api", () => ({
 vi.mock("~/auth/server", () => ({
   auth: mocks.auth,
 }));
-
-import { GET, OPTIONS } from "./route";
 
 describe("tRPC route handlers", () => {
   beforeEach(() => {
