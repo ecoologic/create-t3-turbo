@@ -28,11 +28,11 @@ pnpm lint:fix
   * eg: `src/app/page.tsx` and `src/app/page.spec.tsx`
   * write _specs_ like: `it "renders stuff"` instead of `test("what")`
 
-TODO: pg broken
-TODO: wider linting airbnb etc
-TODO: enforce specs with eslint
-TODO: dbcleaner and factories?
+OK: pg broken
 TODO: GHA
+TODO: enforce specs with eslint
+TODO: wider linting airbnb etc
+TODO: dbcleaner and factories?
 TODO: Husky pre-commit
 TODO: Mongo
 TODO: Trunk?
