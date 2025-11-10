@@ -75,62 +75,22 @@ jobs:
 
       - name: Summarize coverage
         id: summarize_coverage
-        run: |
-          set -euo pipefail
-          mkdir -p tmp
-          INPUT_PATH=""
-          if [ -f apps/nextjs/coverage/coverage-summary.json ]; then
-            INPUT_PATH="apps/nextjs/coverage/coverage-summary.json"
-          elif [ -f apps/nextjs/coverage/coverage-final.json ]; then
-            INPUT_PATH="apps/nextjs/coverage/coverage-final.json"
-          else
-            echo "Expected coverage summary JSON but none was produced." >&2
-            echo "Ensure 'pnpm -F @acme/nextjs specs --coverage' writes to apps/nextjs/coverage/." >&2
-            exit 1
-          fi
-          node scripts/coverage-summary.mjs "$INPUT_PATH" tmp/nextjs-coverage-summary.json | tee tmp/nextjs-coverage-summary.txt
+        run: bash scripts/ci/summarize-coverage.sh
 
       - name: Capture coverage metrics
         id: coverage_metrics
         env:
           SUMMARY_PATH: tmp/nextjs-coverage-summary.json
-        run: |
-          node - <<'NODE'
-          const fs = require("fs");
-          const summary = JSON.parse(fs.readFileSync(process.env.SUMMARY_PATH, "utf8"));
-          const round = (value) => Math.round(value * 100) / 100;
-          const append = (k, v) => fs.appendFileSync(process.env.GITHUB_OUTPUT, `${k}=${round(v)}\n`);
-          append("lines_pct", summary.totals.lines.pct);
-          append("branches_pct", summary.totals.branches.pct);
-          append("functions_pct", summary.totals.functions.pct);
-          append("statements_pct", summary.totals.statements.pct);
-          NODE
+        run: bash scripts/ci/capture-coverage-metrics.sh
 
       - name: Enforce minimum coverage
         env:
           MIN_LINES_COVERAGE_PERCENT: "1"
           LINES_PCT: ${{ steps.coverage_metrics.outputs.lines_pct }}
-        run: |
-          node - <<'NODE'
-          const min = Number(process.env.MIN_LINES_COVERAGE_PERCENT);
-          const lines = Number(process.env.LINES_PCT ?? 0);
-          if (Number.isNaN(lines)) {
-            console.error("Unable to parse lines coverage percentage.");
-            process.exit(1);
-          }
-          if (lines < min) {
-            console.error(`Coverage check failed: lines ${lines}% < minimum ${min}%.`);
-            process.exit(1);
-          }
-          console.log(`Coverage check passed: lines ${lines}% >= minimum ${min}%.`);
-          NODE
+        run: bash scripts/ci/enforce-min-lines-coverage.sh
 
       - name: Publish coverage summary
-        run: |
-          {
-            echo "### Next.js coverage";
-            cat tmp/nextjs-coverage-summary.txt;
-          } >> "$GITHUB_STEP_SUMMARY"
+        run: bash scripts/ci/publish-coverage-summary.sh
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
@@ -158,85 +118,18 @@ jobs:
           BASELINE_ARTIFACT_PATH: ${{ runner.temp }}/nextjs-coverage-main.zip
         with:
           script: |
-            const fs = require("fs");
-            const { owner, repo } = context.repo;
-            const runs = await github.rest.actions.listWorkflowRuns({
-              owner,
-              repo,
-              workflow_id: "ci.yml",
-              branch: "main",
-              status: "success",
-              per_page: 5,
-            });
-            const run = runs.data.workflow_runs.find(Boolean);
-            if (!run) {
-              core.warning("Unable to find a successful main run with coverage artifact.");
-              core.setOutput("found", "false");
-              return;
-            }
-            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
-              owner,
-              repo,
-              run_id: run.id,
-              per_page: 50,
-            });
-            const artifact = artifacts.data.artifacts.find(
-              (candidate) => candidate.name === "nextjs-coverage-summary",
-            );
-            if (!artifact) {
-              core.warning(
-                `No nextjs-coverage-summary artifact found on run id ${run.id} (${run.html_url}).`,
-              );
-              core.setOutput("found", "false");
-              return;
-            }
-            const download = await github.rest.actions.downloadArtifact({
-              owner,
-              repo,
-              artifact_id: artifact.id,
-              archive_format: "zip",
-            });
-            const buffer = Buffer.from(download.data);
-            await fs.promises.writeFile(process.env.BASELINE_ARTIFACT_PATH, buffer);
-            core.info(`Downloaded baseline coverage from run ${run.id}.`);
-            core.setOutput("found", "true");
-            core.setOutput("zip", process.env.BASELINE_ARTIFACT_PATH);
+            const downloadBaselineCoverage = require("./scripts/ci/download-baseline-coverage.js");
+            await downloadBaselineCoverage({ github, context, core });
 
       - name: Extract baseline coverage summary
         if: steps.main_coverage_artifact.outputs.found == 'true'
-        run: |
-          set -euo pipefail
-          rm -rf tmp/baseline-coverage
-          mkdir -p tmp/baseline-coverage
-          unzip -q "${{ steps.main_coverage_artifact.outputs.zip }}" -d tmp/baseline-coverage
+        env:
+          BASELINE_COVERAGE_ZIP: ${{ steps.main_coverage_artifact.outputs.zip }}
+        run: bash scripts/ci/extract-baseline-coverage.sh
 
       - name: Compare coverage against main
         if: steps.main_coverage_artifact.outputs.found == 'true'
         id: compare_coverage
         env:
           CURRENT_SUMMARY: tmp/nextjs-coverage-summary.json
-        run: |
-          set -euo pipefail
-          BASELINE_SUMMARY=$(find tmp/baseline-coverage -name "nextjs-coverage-summary.json" -print -quit)
-          if [ -z "$BASELINE_SUMMARY" ]; then
-            echo "Unable to locate baseline coverage summary file." >&2
-            exit 1
-          fi
-          export BASELINE_SUMMARY
-          node - <<'NODE'
-          const fs = require("fs");
-          const current = JSON.parse(fs.readFileSync(process.env.CURRENT_SUMMARY, "utf8"));
-          const baseline = JSON.parse(fs.readFileSync(process.env.BASELINE_SUMMARY, "utf8"));
-          const round = (value) => Math.round(value * 100) / 100;
-          const setOutput = (name, value) => fs.appendFileSync(process.env.GITHUB_OUTPUT, `${name}=${value}\n`);
-          const metrics = ["lines", "branches", "functions", "statements"];
-          const lines = metrics.map((metric) => {
-            const currentPct = round(current.totals[metric].pct);
-            const baselinePct = round(baseline.totals[metric].pct);
-            const diff = round(currentPct - baselinePct);
-            setOutput(`baseline_${metric}_pct`, baselinePct);
-            setOutput(`${metric}_diff`, diff);
-            return `- ${metric[0].toUpperCase() + metric.slice(1)}: ${currentPct}% (Δ ${diff} vs ${baselinePct}%)`;
-          });
-          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `\n### Coverage delta vs main\n${lines.join("\n")}\n`);
-          NODE
+        run: bash scripts/ci/compare-coverage.sh
