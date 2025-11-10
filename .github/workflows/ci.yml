@@ -31,7 +31,7 @@ jobs:
       #   shell: bash
       #   run: cp .env.example .env
 
-      - name: Lint
+      - name: "**Lint**"
         run: pnpm lint && pnpm lint:ws
 
   format:
@@ -42,7 +42,8 @@ jobs:
       - name: Setup
         uses: ./tooling/github/setup
 
-      - name: Format
+      - name: "**Format**"
+        # Ensures consistency between eslint and prettier
         run: pnpm format
 
   typecheck:
@@ -53,7 +54,7 @@ jobs:
       - name: Setup
         uses: ./tooling/github/setup
 
-      - name: Typecheck
+      - name: "**Typecheck**"
         run: pnpm typecheck
 
   test:
@@ -70,7 +71,7 @@ jobs:
       - name: Setup
         uses: ./tooling/github/setup
 
-      - name: Test
+      - name: "**Specs**"
         run: pnpm -F @acme/nextjs specs --coverage
 
       - name: Summarize coverage
@@ -83,8 +84,9 @@ jobs:
           SUMMARY_PATH: tmp/nextjs-coverage-summary.json
         run: bash scripts/ci/capture-coverage-metrics.sh
 
-      - name: Enforce minimum coverage
+      - name: "**Enforce minimum coverage**"
         env:
+          # See apps/nextjs/vitest.config.ts
           MIN_LINES_COVERAGE_PERCENT: "1"
           LINES_PCT: ${{ steps.coverage_metrics.outputs.lines_pct }}
         run: bash scripts/ci/enforce-min-lines-coverage.sh
@@ -127,7 +129,7 @@ jobs:
           BASELINE_COVERAGE_ZIP: ${{ steps.main_coverage_artifact.outputs.zip }}
         run: bash scripts/ci/extract-baseline-coverage.sh
 
-      - name: Compare coverage against main
+      - name: "**Compare coverage against main**"
         if: steps.main_coverage_artifact.outputs.found == 'true'
         id: compare_coverage
         env:

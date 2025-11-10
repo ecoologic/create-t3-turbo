@@ -13,18 +13,21 @@ If any any point the documentation is outdated or needs improvement, _obviously_
 
 # Update .env
 # Update packages/auth/script/auth-cli.ts
+
+# Keep Node versions aligned across .nvmrc, package.json, and Trunk
+./scripts/update-node.sh 22.21.0
 ```
 
 ## Development
 
 ```sh
-pnpm format:fix
-pnpm lint:fix
+pnpm format:fix # Prettier
+pnpm lint:fix # Eslint
 ```
 
-## Tests
+## Specs
 
-* Colocate your tests with your production code
+* Colocate your specs with your production code
   * eg: `src/app/page.tsx` and `src/app/page.spec.tsx`
   * write _specs_ like: `it "renders stuff"` instead of `test("what")`
 
@@ -38,8 +41,9 @@ pnpm lint:fix
 - The pipeline fails if line coverage dips below 10%, so keep at least one real test in place before opening a PR.
 - If no successful `main` run exists yet the compare step is skipped, but artifacts are still created so the next run has a baseline.
 - You can inspect the coverage totals/deltas inside the `CI / test` job summary and, if needed, download the summary artifact to feed into other tooling.
+
 OK: pg broken
-TODO: GHA
+OK: GHA
 TODO: enforce specs with eslint
 TODO: wider linting airbnb etc
 TODO: dbcleaner and factories?
