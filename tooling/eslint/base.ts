@@ -6,11 +6,13 @@ import turboPlugin from "eslint-plugin-turbo";
 import { defineConfig } from "eslint/config";
 import tseslint from "typescript-eslint";
 
+const testFileIgnoreGlobs = ["**/*.spec.*", "**/*.test.*", "**/__tests__/**"];
+
 /**
  * All packages that leverage t3-env should use this rule
  */
 export const restrictEnvAccess = defineConfig(
-  { ignores: ["**/env.ts"] },
+  { ignores: ["**/env.ts", ...testFileIgnoreGlobs] },
   {
     files: ["**/*.js", "**/*.ts", "**/*.tsx"],
     rules: {
@@ -39,7 +41,7 @@ export const restrictEnvAccess = defineConfig(
 export const baseConfig = defineConfig(
   // Ignore files not tracked by VCS and any config files
   includeIgnoreFile(path.join(import.meta.dirname, "../../.gitignore")),
-  { ignores: ["**/*.config.*"] },
+  { ignores: ["**/*.config.*", ...testFileIgnoreGlobs] },
   {
     files: ["**/*.js", "**/*.ts", "**/*.tsx"],
     plugins: {
