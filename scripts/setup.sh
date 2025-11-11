@@ -2,6 +2,8 @@
 
 # ATTENTION! Keep this script idempotent
 
+# TODO: remove all version locks
+
 echo "Git configuration..."
 git remote add t3 https://github.com/t3-oss/create-t3-turbo.git
 git config pull.rebase true
