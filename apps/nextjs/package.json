@@ -11,7 +11,7 @@
     "start": "pnpm with-env next start",
     "typecheck": "tsc --noEmit",
     "with-env": "dotenv -e ../../.env --",
-    "specs": "vitest run"
+    "specs": "vitest"
   },
   "dependencies": {
     "@acme/api": "workspace:*",
@@ -27,7 +27,7 @@
     "@trpc/tanstack-react-query": "catalog:",
     "better-auth": "catalog:",
     "next": "^16.0.0",
-    "pg": "^8.13.0",
+    "pg": "^8.16.3",
     "react": "catalog:react19",
     "react-dom": "catalog:react19",
     "superjson": "2.2.3",

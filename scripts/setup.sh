@@ -11,12 +11,12 @@ git config branch.autoSetupRebase always
 echo "DONE"
 
 
-echo "Git rebase from t3..."
-git fetch t3 && git rebase -s recursive -X theirs t3/main
-echo "DONE"
+# echo "Git rebase from t3..."
+# git fetch t3 && git rebase -s recursive -X theirs t3/main
+# echo "DONE"
 
-echo "Remove LICENSE."
-rm LICENSE
+# echo "Remove LICENSE."
+# rm LICENSE
 
 echo "Node packages install..."
 bash ./scripts/update-node.sh "$(jq -r '.engines.node' package.json | tr -d '^')"
@@ -30,12 +30,16 @@ pnpm format:fix
 pnpm lint:fix
 echo "DONE"
 
+echo "Install act for local GitHub Actions testing..."
+bash ./scripts/install-act.sh
+echo "DONE"
+
 echo "Setup DB."
 pnpm db:push
 
 echo "Setup Vitest and co..."
 cd apps/nextjs || exit 1
-pnpm add pg@^8.13.0
+pnpm add pg@^8.16.3
 pnpm add -D \
   vitest@^4.0.7 \
   @vitejs/plugin-react@catalog \

@@ -56,6 +56,7 @@ jobs:
         run: bash scripts/ci/publish-coverage-summary.sh
 
       - name: Upload coverage artifact
+        if: ${{ !env.ACT }}
         uses: actions/upload-artifact@v4
         with:
           name: nextjs-coverage-${{ github.sha }}
@@ -66,7 +67,7 @@ jobs:
             tmp/nextjs-coverage-summary.txt
 
       - name: Upload main coverage summary
-        if: github.ref == 'refs/heads/main'
+        if: ${{ github.ref == 'refs/heads/main' && !env.ACT }}
         uses: actions/upload-artifact@v4
         with:
           name: nextjs-coverage-summary
