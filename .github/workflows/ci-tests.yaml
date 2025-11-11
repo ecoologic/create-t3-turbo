@@ -1,0 +1,98 @@
+name: CI Tests
+
+on:
+  pull_request:
+    branches: ["**"]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+# You can leverage Vercel Remote Caching with Turbo to speed up your builds
+# @link https://turborepo.com/docs/core-concepts/remote-caching#remote-caching-on-vercel-builds
+env:
+  FORCE_COLOR: 3
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    outputs:
+      lines_pct: ${{ steps.coverage_metrics.outputs.lines_pct }}
+      branches_pct: ${{ steps.coverage_metrics.outputs.branches_pct }}
+      functions_pct: ${{ steps.coverage_metrics.outputs.functions_pct }}
+      statements_pct: ${{ steps.coverage_metrics.outputs.statements_pct }}
+      lines_diff: ${{ steps.compare_coverage.outputs.lines_diff }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup
+        uses: ./tooling/github/setup
+
+      - name: "**Specs**"
+        run: pnpm -F @acme/nextjs specs --coverage
+
+      - name: Summarize coverage
+        id: summarize_coverage
+        run: bash scripts/ci/summarize-coverage.sh
+
+      - name: Capture coverage metrics
+        id: coverage_metrics
+        env:
+          SUMMARY_PATH: tmp/nextjs-coverage-summary.json
+        run: bash scripts/ci/capture-coverage-metrics.sh
+
+      - name: "**Enforce minimum coverage**"
+        env:
+          # See apps/nextjs/vitest.config.ts
+          MIN_LINES_COVERAGE_PERCENT: "1"
+          LINES_PCT: ${{ steps.coverage_metrics.outputs.lines_pct }}
+        run: bash scripts/ci/enforce-min-lines-coverage.sh
+
+      - name: Publish coverage summary
+        run: bash scripts/ci/publish-coverage-summary.sh
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextjs-coverage-${{ github.sha }}
+          retention-days: 14
+          path: |
+            apps/nextjs/coverage
+            tmp/nextjs-coverage-summary.json
+            tmp/nextjs-coverage-summary.txt
+
+      - name: Upload main coverage summary
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextjs-coverage-summary
+          retention-days: 21
+          path: tmp/nextjs-coverage-summary.json
+
+      - name: Download baseline coverage from main
+        if: github.event_name == 'pull_request'
+        id: main_coverage_artifact
+        uses: actions/github-script@v7
+        env:
+          BASELINE_ARTIFACT_PATH: ${{ runner.temp }}/nextjs-coverage-main.zip
+        with:
+          script: |
+            const downloadBaselineCoverage = require("./scripts/ci/download-baseline-coverage.js");
+            await downloadBaselineCoverage({ github, context, core });
+
+      - name: Extract baseline coverage summary
+        if: steps.main_coverage_artifact.outputs.found == 'true'
+        env:
+          BASELINE_COVERAGE_ZIP: ${{ steps.main_coverage_artifact.outputs.zip }}
+        run: bash scripts/ci/extract-baseline-coverage.sh
+
+      - name: "**Compare coverage against main**"
+        if: steps.main_coverage_artifact.outputs.found == 'true'
+        id: compare_coverage
+        env:
+          CURRENT_SUMMARY: tmp/nextjs-coverage-summary.json
+        run: bash scripts/ci/compare-coverage.sh
