@@ -17,8 +17,12 @@ echo "Remove LICENSE."
 rm LICENSE
 
 echo "Node packages install..."
-nvm install "$(jq -r '.engines.node' package.json | tr -d '^')"
-corepack enable && corepack prepare pnpm@10.19.0 --activate # TODO: dynamic version
+bash ./scripts/update-node.sh "$(jq -r '.engines.node' package.json | tr -d '^')"
+corepack enable && corepack prepare pnpm@10.19.0 --activate # TODO: dynamic version of pnpm
+echo "DONE"
+
+echo "Ensuring workspace coverage dependencies..."
+pnpm add -Dw istanbul-lib-coverage@^3.2.1
 pnpm install
 pnpm format:fix
 pnpm lint:fix
@@ -29,7 +33,16 @@ pnpm db:push
 
 echo "Setup Vitest and co..."
 cd apps/nextjs || exit 1
-pnpm add -D vitest @vitejs/plugin-react jsdom @testing-library/react @testing-library/dom @testing-library/jest-dom vite-tsconfig-paths
+pnpm add pg@^8.13.0
+pnpm add -D \
+  vitest@^4.0.7 \
+  @vitejs/plugin-react@catalog \
+  jsdom@^27.0.0 \
+  @testing-library/react@^16.3.0 \
+  @testing-library/dom@^10.4.1 \
+  @testing-library/jest-dom@^6.6.3 \
+  vite-tsconfig-paths@^5.1.4 \
+  @vitest/coverage-v8@^4.0.8
 pnpm pkg set 'scripts.specs=vitest'
 cd ../..
 echo "DONE"
