@@ -13,10 +13,9 @@ If any any point the documentation is outdated or needs improvement, _obviously_
 
 # Update .env
 # Update packages/auth/script/auth-cli.ts
-
-# Keep Node versions aligned across .nvmrc, package.json, and Trunk
-./scripts/update-node.sh 22.21.0
 ```
+
+`./scripts/setup.sh` also installs [nektos/act](https://github.com/nektos/act) into `~/.local/bin`. Add `export PATH="$HOME/.local/bin:$PATH"` to your shell profile if that directory is not already on your `PATH`. You can rerun the installer on demand via `./scripts/install-act.sh`.
 
 ## Development
 
@@ -24,6 +23,22 @@ If any any point the documentation is outdated or needs improvement, _obviously_
 pnpm format:fix # Prettier
 pnpm lint:fix # Eslint
 ```
+
+## Local GitHub Actions via act
+
+```sh
+export ACT_IMAGE="catthehacker/ubuntu:act-latest"  # or put this in your shell profile
+act pull_request \
+  --workflows .github/workflows/ci-test.yaml \
+  -P "ubuntu-latest=${ACT_IMAGE}"
+```
+
+Swap `-j lint` for other jobs:
+- `typecheck` in `.github/workflows/ci.yml`
+- `test` in `.github/workflows/ci-tests.yaml` (run `act pull_request --workflows .github/workflows/ci-tests.yaml ... -j test` to execute the test workflow)
+Run both workflows by invoking `act` twice, once per workflow file.
+
+Pass `--secret-file .github/act.secrets` (or your own path) when a workflow needs secrets or vars.
 
 ## Specs
 
@@ -44,6 +59,7 @@ pnpm lint:fix # Eslint
 
 OK: pg broken
 OK: GHA
+OK: act
 TODO: enforce specs with eslint
 TODO: wider linting airbnb etc
 TODO: dbcleaner and factories?
